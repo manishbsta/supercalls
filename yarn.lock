@@ -5813,11 +5813,6 @@
   "resolved" "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz"
   "version" "17.0.2"
 
-"react-native-call-log@^2.1.2":
-  "integrity" "sha512-nWHmb+QMN/AbbZFEuUGiQePssPgjQr5dibNAURDlqO4S5wuLk1XzxxsLUAVHZnB0FdJoMlajD7tUAXtaoxYwUQ=="
-  "resolved" "https://registry.npmjs.org/react-native-call-log/-/react-native-call-log-2.1.2.tgz"
-  "version" "2.1.2"
-
 "react-native-codegen@^0.71.3":
   "integrity" "sha512-5AvdHVU1sAaXg05i0dG664ZTaCaIFaY1znV5vNsj+wUu6MGxNEUNbDKk9dxKUkkxOyk2KZOK5uhzWL0p5H5yZQ=="
   "resolved" "https://registry.npmjs.org/react-native-codegen/-/react-native-codegen-0.71.3.tgz"
