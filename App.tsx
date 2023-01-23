@@ -1,118 +1,149 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, {useEffect, useRef, useMemo, useState} from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
+  PermissionsAndroid,
   StyleSheet,
+  TextInput,
   Text,
-  useColorScheme,
   View,
+  TouchableOpacity,
 } from 'react-native';
+import CallLog, {CallLogDetails} from './src/CallLog';
+import {FlashList, ListRenderItem} from '@shopify/flash-list';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+const App = () => {
+  const [callLogs, setCallLogs] = useState<CallLogDetails[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const ref = useRef<FlashList<CallLogDetails>>(null);
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+  const data = useMemo(() => {
+    return callLogs.filter(
+      item =>
+        item.callerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.phoneNumber.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [callLogs, searchQuery]);
 
-function Section({children, title}: SectionProps): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+  useEffect(() => {
+    fetch();
+  }, []);
 
-function App(): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const fetch = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
+        {
+          title: 'Call Logs Permission',
+          message:
+            'Super Calls App needs access to your call logs to view them elegantly. Please allow.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        const res = await CallLog.fetchCallLogs();
+        setCallLogs(res);
+      }
+    } catch (error) {
+      console.log({error});
+    }
+  };
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const clearSearchBar = () => {
+    setSearchQuery('');
+    ref.current?.scrollToIndex({index: 0, animated: true});
+  };
+
+  const renderCallLogs: ListRenderItem<CallLogDetails> = ({item}) => {
+    const icon =
+      item.callDirection === 'INCOMING'
+        ? 'phone-incoming'
+        : item.callDirection === 'OUTGOING'
+        ? 'phone-outgoing'
+        : item.callDirection === 'MISSED'
+        ? 'phone-missed'
+        : 'phone-settings';
+
+    const iconColor =
+      item.callDirection === 'INCOMING'
+        ? 'green'
+        : item.callDirection === 'OUTGOING'
+        ? 'blue'
+        : item.callDirection === 'MISSED'
+        ? 'red'
+        : undefined;
+
+    return (
+      <View style={styles.logItemContainer}>
+        <Text>{item.callerName}</Text>
+        <Text style={styles.phoneNumberText}>{item.phoneNumber}</Text>
+        <Text>{item.callDate}</Text>
+        <Text>
+          {item.callDuration.hr}h {item.callDuration.min}m{' '}
+          {item.callDuration.sec}s
+        </Text>
+        <Text>
+          <Icon name={icon} color={iconColor} size={16} /> {item.callDirection}
+        </Text>
+      </View>
+    );
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
+    <>
+      <View style={styles.searchBoxContainer}>
+        <Icon name="account-search-outline" size={22} />
+        <TextInput
+          placeholder="Search by phone number or name"
+          value={searchQuery}
+          style={styles.textInput}
+          onChangeText={setSearchQuery}
+        />
+        {!!searchQuery && (
+          <TouchableOpacity activeOpacity={0.8} onPress={clearSearchBar}>
+            <Icon name="close" size={22} />
+          </TouchableOpacity>
+        )}
+      </View>
+      <FlashList
+        ref={ref}
+        data={data}
+        estimatedItemSize={116}
+        renderItem={renderCallLogs}
+        keyboardDismissMode="on-drag"
+        keyExtractor={(_, index) => index.toString()}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    </>
   );
-}
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+};
 
 export default App;
+
+const styles = StyleSheet.create({
+  searchBoxContainer: {
+    marginTop: 12,
+    marginBottom: 5,
+    marginHorizontal: 12,
+    elevation: 2,
+    backgroundColor: 'white',
+    borderRadius: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+
+  textInput: {
+    flex: 1,
+    paddingHorizontal: 10,
+  },
+
+  logItemContainer: {
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+
+  phoneNumberText: {
+    fontWeight: '600',
+  },
+});
